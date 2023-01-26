@@ -10,8 +10,8 @@ public class CustomSnappingTool : EditorTool
 {
     public Texture2D ToolIcon;
     private Transform oldTarget;
-    private CustomSnapPoint[] allPoints;
-    private CustomSnapPoint[] targetPoints;
+    private Dictionary<PointBuilder, List<CustomSnapPoint>> allPoints;
+    private List<CustomSnapPoint> targetPoints;
 
     private void OnEnable()
     {
@@ -19,7 +19,9 @@ public class CustomSnappingTool : EditorTool
     }
     public override GUIContent toolbarIcon
     {
-        get { return new GUIContent(
+        get
+        {
+            return new GUIContent(
             image: ToolIcon,
             text: "Custom Snap Move Tool",
             tooltip: "Custom Snap Move Tool - best tool ever"
@@ -28,42 +30,48 @@ public class CustomSnappingTool : EditorTool
     }
     public override void OnToolGUI(EditorWindow window)
     {
-        
+
         Transform targetTransform = ((CustomSnap)target).transform;
         if (targetTransform != oldTarget)
         {
-            allPoints = FindObjectsOfType<CustomSnapPoint>();
-            targetPoints = targetTransform.GetComponentsInChildren<CustomSnapPoint>();
+            PointBuilder pointBuilder = target.GetComponent<PointBuilder>();
+            allPoints = pointBuilder.GetAllPoints();
+            targetPoints = pointBuilder.GetTargetPoints(pointBuilder);
             oldTarget = targetTransform;
         }
         EditorGUI.BeginChangeCheck();
         Vector3 newPosition = Handles.PositionHandle(targetTransform.position, Quaternion.identity);
-        if(EditorGUI.EndChangeCheck())
+        if (EditorGUI.EndChangeCheck())
         {
             Undo.RecordObject(targetTransform, name: "Move with snap tool");
             MoveWithSnapping(targetTransform, newPosition);
-            
+
         }
     }
     private void MoveWithSnapping(Transform targetTransform, Vector3 newPosition)
     {
         Vector3 bestPosition = newPosition;
         float closestDistance = float.PositiveInfinity;
-        foreach ( var point  in allPoints)
+        foreach (var points in allPoints)
         {
-            if(point.transform.parent!=targetTransform)
+            PointBuilder key = points.Key;
+            if ( points.Key!= target.GetComponent<PointBuilder>())
             {
-                foreach (var ownPoint in targetPoints)
+                foreach (var point in allPoints[key])
                 {
-                    Vector3 targetPos = point.transform.position - (ownPoint.transform.position - targetTransform.position);
-                    float distance = Vector3.Distance(targetPos,newPosition);
-
-                    if(distance < closestDistance)
+                    foreach (var ownPoint in targetPoints)
                     {
-                        closestDistance= distance;
-                        bestPosition = targetPos;
+                        Vector3 targetPos = point.pos - (ownPoint.pos - targetTransform.position);
+                        float distance = Vector3.Distance(targetPos, newPosition);
+
+                        if (distance < closestDistance)
+                        {
+                            closestDistance = distance;
+                            bestPosition = targetPos;
+                        }
                     }
                 }
+               
             }
         }
         if (closestDistance < 0.5f)

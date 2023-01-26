@@ -1,18 +1,17 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
-
+[ExecuteAlways]
 public class CustomSnap : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+
+    public void Awake()
     {
-        
+        if(!transform.GetComponent<PointBuilder>())
+        {
+            transform.AddComponent<PointBuilder>();
+        }
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }
